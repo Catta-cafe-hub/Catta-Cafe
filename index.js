@@ -56,12 +56,16 @@ const themes = [
     'theme-espresso', 'theme-ocean', 'theme-berry' // ✅ 3 ธีมใหม่จากรูป
 ];
 
-// ✅ [NEW] Load Confetti Library Dynamically
-if (!document.getElementById('confetti-script')) {
-    const script = document.createElement('script');
-    script.id = 'confetti-script';
-    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
-    document.head.appendChild(script);
+// ✅ [NEW] Load Confetti Library Dynamically (Safe Mode)
+try {
+    if (!document.getElementById('confetti-script')) {
+        const script = document.createElement('script');
+        script.id = 'confetti-script';
+        script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+        document.head.appendChild(script);
+    }
+} catch (e) {
+    console.warn("CattaHub: Confetti Script blocked by CSP. Safe to ignore.", e);
 }
 
 
@@ -1158,26 +1162,34 @@ function forceExternalMediaAllowed() {
 }
 
 function loadCattaHubSettings() {
-    const extSettings = $('#extensions_settings');
-    if (extSettings.length === 0) return; 
-
-    $('.catta-hub-settings').remove();
-    
-
     const enabledKey = `${extensionName}:enabled`;
     const storedVal = localStorage.getItem(enabledKey);
     const enabled = storedVal === null ? true : (storedVal === 'true');
-
 
     const barKey = `${extensionName}:bar_visible`;
     const barVal = localStorage.getItem(barKey);
     const barVisible = barVal === null ? true : (barVal === 'true');
 
+    // 🌟 แก้ตรงนี้: ย้ายคำสั่งเรียกน้องแคตต้า (mountCattaHub) ขึ้นมาไว้ข้างบนสุด!
+    // ถึงหน้าตั้งค่าของ SillyTavern จะยังโหลดไม่เสร็จ น้องแคตต้าก็จะโผล่มาแน่นอน
+    if (enabled) {
+        setTimeout(mountCattaHub, 1000);
+        setInterval(forceExternalMediaAllowed, 2000);
+        if(barCheckInterval) clearInterval(barCheckInterval);
+        barCheckInterval = setInterval(renderPsycheBar, 3000);
+    }
+
+    const extSettings = $('#extensions_settings');
+    // ถ้าหน้าตั้งค่ายังไม่มา ให้หยุดทำปุ่มตั้งค่า (แต่น้องแคตต้าด้านบนทำงานไปแล้ว!)
+    if (extSettings.length === 0) return; 
+
+    $('.catta-hub-settings').remove();
+
     const settingsHtml = `
     <div class="catta-hub-settings">
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header">
-                <b>Catta Café Hub (Ultimate)</b> <!-- ✅ เปลี่ยนชื่อตรงนี้ -->
+                <b>Catta Café Hub (Ultimate)</b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
             </div>
             <div class="inline-drawer-content">
@@ -1191,7 +1203,7 @@ function loadCattaHubSettings() {
                     </label>
                 </div>
 
-                <!-- ✅ Relationship Bar Toggle -->
+                <!-- Relationship Bar Toggle -->
                 <div class="catta-settings-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
                     <div class="inline-drawer-text" title="ซ่อนหลอดคะแนน แต่ยังเก็บแต้มปกติ">Show Relationship Bar</div>
                     <label class="checkbox_label" for="${extensionName}-bar-toggle" style="margin:0;">
@@ -1214,26 +1226,17 @@ function loadCattaHubSettings() {
         $root.find('.inline-drawer-content').toggleClass('open');
     });
 
-
     $root.find(`#${extensionName}-enabled`).on('change', function () {
         const isEnabled = this.checked;
         localStorage.setItem(enabledKey, String(isEnabled));
         if (isEnabled) { mountCattaHub(); } else { unmountCattaHub(); }
     });
 
-
-    $root.find(`#${extensionName}-bar-toggle`).on('change', function () {
+$root.find(`#${extensionName}-bar-toggle`).on('change', function () {
         const isVisible = this.checked;
         localStorage.setItem(barKey, String(isVisible));
         renderPsycheBar();
     });
-
-    if (enabled) {
-        setTimeout(mountCattaHub, 1000);
-        setInterval(forceExternalMediaAllowed, 2000);
-        if(barCheckInterval) clearInterval(barCheckInterval);
-        barCheckInterval = setInterval(renderPsycheBar, 3000);
-    }
 }
 
 $('body').append(`
