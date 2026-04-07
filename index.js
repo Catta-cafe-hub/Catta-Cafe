@@ -287,7 +287,7 @@ async function goOnline(charId) {
         const data = await res.json();
         if (data.success) {
 
-            hiddenPrompt = "";
+            hiddenPrompt = data.system_prompt || "";
 
             currentRankAssets = data.rank_assets || {};
             const rankCount = Object.keys(currentRankAssets).length;
@@ -315,9 +315,39 @@ function enableInterceptor() {
     window.fetch = async function(input, init) {
         let urlStr = (typeof input === 'string') ? input : (input.url || input.toString());
 
+        if (isOnline && hiddenPrompt && (urlStr.includes('/v1/chat/completions') || urlStr.includes('generate'))) {
+            if (init && init.method === 'POST' && init.body) {
+                try {
+                    let body = JSON.parse(init.body);
+                    let isReplaced = false;
+
+                    // เช็คในรูปแบบ Array ของ OpenAI / DeepSeek
+                    if (body.messages && Array.isArray(body.messages)) {
+                        for (let i = 0; i < body.messages.length; i++) {
+                            // ถ้าเจอคำว่า Protected by CattaHub ให้สวมทับทันที!
+                            if (body.messages[i].content && body.messages[i].content.includes("Protected by CattaHub")) {
+                                body.messages[i].content = hiddenPrompt; 
+                                isReplaced = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isReplaced) {
+                        init.body = JSON.stringify(body);
+                        console.log("🐱 CattaHub: สลับคำโปรยสำเร็จก่อนส่งไป AI!");
+                    } else if (body.messages && Array.isArray(body.messages) && body.messages.length > 0) {
+
+                        body.messages[0].content = hiddenPrompt + "\n\n" + body.messages[0].content;
+                        init.body = JSON.stringify(body);
+                    }
+                } catch (e) {
+                    console.error("CattaHub Error:", e);
+                }
+            }
+        }
 
         let response = await originalFetch(input, init);
-
 
         if (isOnline && (urlStr.includes('/v1/chat/completions') || urlStr.includes('generate'))) {
             const contentType = response.headers.get("content-type");
@@ -329,14 +359,12 @@ function enableInterceptor() {
                     let modified = false;
                     let responseText = "";
 
-
                     let sid = scanForSessionID();
                     if (!sid && currentSessionID) sid = currentSessionID;
                     if (!sid) {
                         sid = generateSessionID();
                         console.log("🐱 CattaHub (Fetch): Generated New Session ID -> " + sid);
                     }
-
 
                     currentSessionID = sid;
 
@@ -346,7 +374,6 @@ function enableInterceptor() {
                     }
 
                     const FULL_INJECTION = `${INJECTION_TEXT_VISIBLE}\n<!-- CATTA_SID:${sid} -->`;
-
 
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         responseText = data.choices[0].message.content;
@@ -358,9 +385,7 @@ function enableInterceptor() {
                         modified = true;
                     }
 
-
                     if (responseText && currentPsyche.loaded && currentSessionID) {
-
                         originalFetch(`${SERVER_URL}/v1/game/process_score`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession.token}` },
@@ -382,11 +407,9 @@ function enableInterceptor() {
                                         if (rankImage) showRankUpOverlay(data.new_level, rankImage);
                                         else triggerNotification("Relationship Update!", `Level: ${data.new_level}`, `${SERVER_URL}/public/icons/heart.png`);
                                     }
-
-                                    // อัปเดตหน้าจอโง่ๆ ตามค่าที่ Server ส่งมา
                                     renderPsycheBar(data.score_change);
                                 }
-                            }).catch(() => {}); // ปล่อยผ่านถ้าเน็ตกระตุก
+                            }).catch(() => {}); 
                     }
 
                     if (modified) {
@@ -402,9 +425,8 @@ function enableInterceptor() {
             }
         }
 
-        // --- 3. Log Stats ---
+        // Log Stats (โค้ดเดิมของคุณ)
         if (isOnline && (urlStr.includes('/v1/chat/completions') || urlStr.includes('generate'))) {
-
             if (playSession) {
                 originalFetch(`${SERVER_URL}/v1/game/log_stat`, {
                     method: 'POST',
