@@ -696,11 +696,10 @@ function showRankUpOverlay(levelName, imageUrl) {
             transition: transform 0.2s;
             flex-shrink: 0;
         " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-            Close / ปิด
+            Close / 
         </button>
     </div>
     `;
-
     $('body').append(html);
 }
 
@@ -1214,7 +1213,7 @@ function mountCattaHub() {
 
     // ── DOM Construction ──────────────────────────────────────
     // Button contains 2 image layers that crossfade between states:
-    //   #catta-edge-img  → edge_peek.png (visible in edge state)
+    //   #catta-edge-img  → EDGE_PEEK_URL (visible in edge state)
     //   #catta-float-img → character/cat icon (visible in floating state)
     const btn = document.createElement('div');
     btn.id = 'catta-float-btn';
@@ -1226,18 +1225,24 @@ function mountCattaHub() {
              src="${EDGE_PEEK_URL}"
              draggable="false"
              referrerpolicy="no-referrer"
-             style="position:absolute;inset:0;width:100%;height:100%;
-                    object-fit:cover;object-position:right center;
-                    pointer-events:none;transition:opacity 0.3s ease;"
+             style="position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+                    width:90px; height:110px;
+                    object-fit:contain; object-position:bottom center;
+                    pointer-events:none; transition:opacity 0.3s ease;
+                    filter: drop-shadow(2px 3px 6px rgba(0,0,0,0.45));"
         >
-        <img id="catta-float-img"
-             src="${CUSTOM_ICON_URL}"
-             draggable="false"
-             referrerpolicy="no-referrer"
-             style="position:absolute;inset:0;width:100%;height:100%;
-                    object-fit:cover;border-radius:50%;
-                    pointer-events:none;transition:opacity 0.3s ease;opacity:0;"
+        <div id="catta-float-img-wrapper"
+             style="position:absolute; inset:0; border-radius:50%; overflow:hidden;
+                    box-shadow:0 4px 24px rgba(0,0,0,0.45);
+                    transition:opacity 0.3s ease; opacity:0; pointer-events:none;"
         >
+            <img id="catta-float-img"
+                 src="${CUSTOM_ICON_URL}"
+                 draggable="false"
+                 referrerpolicy="no-referrer"
+                 style="width:100%; height:100%; object-fit:cover;"
+            >
+        </div>
     `;
 
     const popup = document.createElement('div');
@@ -1248,15 +1253,14 @@ function mountCattaHub() {
     document.body.appendChild(popup);
 
     // ── Constants ─────────────────────────────────────────────
-    const BTN_FLOAT_SIZE = 62;   // px — round button diameter
-    // ⚠️ BTN_EDGE_WIDTH ต้องตรงกับ CSS width ใน cfb-edge-left/right เสมอ
-    const BTN_EDGE_WIDTH = 44;   // px — width of edge state (ต้องตรงกับ CSS: width:44px)
-    const PEEK_VISIBLE = 20;     // px — amount visible when snapped (20px → hidden = 24px)
-    const PEEK_H = 60;           // px — height of edge state (ต้องตรงกับ CSS: height:60px)
-    const EDGE_SNAP_ZONE = 48;   // px from screen edge → triggers snap
-    const DRAG_THRESHOLD = 7;    // px moved before drag is confirmed
-    const TAP_MAX_MS = 380;      // ms threshold: tap vs long-press
-    const IDLE_DELAY_MS = 5000;  // ms before button fades out
+    const BTN_FLOAT_SIZE = 62;
+    const BTN_EDGE_WIDTH = 44;
+    const PEEK_VISIBLE = 20;
+    const PEEK_H = 60;
+    const EDGE_SNAP_ZONE = 48;
+    const DRAG_THRESHOLD = 7;
+    const TAP_MAX_MS = 380;
+    const IDLE_DELAY_MS = 5000;
     const STORAGE_KEY = 'catta_btn_pos_v2';
 
     // ── Safe-Area Helper ──────────────────────────────────────
@@ -1275,8 +1279,6 @@ function mountCattaHub() {
     }
 
     // ── Device Detection ──────────────────────────────────────
-    // Touch device = mobile/tablet → edge handle behavior enabled
-    // try/catch: window.matchMedia อาจ throw ใน webview บางตัว
     const isTouchDevice = () => {
         try {
             return (
@@ -1286,7 +1288,6 @@ function mountCattaHub() {
                 window.matchMedia('(pointer: coarse)').matches
             );
         } catch (_) {
-            // fallback: ถ้า screen แคบกว่า 1024px ถือว่าเป็น touch
             return window.innerWidth < 1024;
         }
     };
@@ -1304,7 +1305,7 @@ function mountCattaHub() {
     }
 
     // ── State ─────────────────────────────────────────────────
-    let btnState = 'floating'; // 'floating' | 'edge-left' | 'edge-right'
+    let btnState = 'floating';
     let isDragging = false;
     let hasMoved = false;
     let pressStartTime = 0;
@@ -1313,32 +1314,23 @@ function mountCattaHub() {
     let idleTimer = null;
 
     // ── AnimationController ───────────────────────────────────
-    // Controls CSS transitions and image layer crossfades.
     const AnimationController = {
-        // Switch visual to floating state: round button + float image
         toFloating() {
             btn.classList.remove('cfb-edge-left', 'cfb-edge-right', 'cfb-dragging');
             btn.classList.add('cfb-floating');
             document.getElementById('catta-edge-img').style.opacity = '0';
-            document.getElementById('catta-float-img').style.opacity = '1';
+            document.getElementById('catta-float-img-wrapper').style.opacity = '1';
         },
-        // Switch visual to edge state: peek image visible
         toEdge(side) {
             btn.classList.remove('cfb-floating', 'cfb-dragging');
             btn.classList.add(side === 'right' ? 'cfb-edge-right' : 'cfb-edge-left');
-            // Mirror the peek image for right-side edge
             const edgeImg = document.getElementById('catta-edge-img');
-            edgeImg.style.transform = side === 'right' ? 'scaleX(-1)' : 'scaleX(1)';
-            edgeImg.style.objectPosition = side === 'right' ? 'left center' : 'right center';
+            edgeImg.style.transform = side === 'right' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%) scaleX(1)';
             edgeImg.style.opacity = '1';
-            document.getElementById('catta-float-img').style.opacity = '0';
+            document.getElementById('catta-float-img-wrapper').style.opacity = '0';
         },
-        setDragging(active) {
-            btn.classList.toggle('cfb-dragging', active);
-        },
-        setIdle(active) {
-            btn.classList.toggle('cfb-idle', active);
-        },
+        setDragging(active) { btn.classList.toggle('cfb-dragging', active); },
+        setIdle(active) { btn.classList.toggle('cfb-idle', active); },
     };
 
     // ── Idle Timer ────────────────────────────────────────────
@@ -1349,7 +1341,6 @@ function mountCattaHub() {
     }
 
     // ── SnapController ────────────────────────────────────────
-    // Determines if a position should snap to an edge and which side.
     const SnapController = {
         shouldSnap(left) {
             if (!isTouchDevice()) return false;
@@ -1371,18 +1362,11 @@ function mountCattaHub() {
     };
 
     // ── EdgeHandleState ───────────────────────────────────────
-    // Positions the button at the edge and applies edge visual.
     const EdgeHandleState = {
         apply(top, side) {
             const { vw, vh } = getVP();
             const sa = getSafeArea();
-            const safeTop = sa.top + 8;
-            const safeBottom = vh - sa.bottom - PEEK_H - 8;
-            const clampedTop = clamp(top, safeTop, safeBottom);
-
-            // ── Edge positioning via `left` only (ไม่ใช้ `right` เพราะชนกับ inline style)
-            // Left edge:  숨겨진 part = BTN_EDGE_WIDTH - PEEK_VISIBLE → left เป็นลบ
-            // Right edge: ปุ่มชิดขวา → left = vw - PEEK_VISIBLE (ส่วนที่โผล่คือ PEEK_VISIBLE)
+            const clampedTop = clamp(top, sa.top + 8, vh - sa.bottom - PEEK_H - 8);
             if (side === 'right') {
                 btnState = 'edge-right';
                 btn.style.left = (vw - sa.right - PEEK_VISIBLE) + 'px';
@@ -1398,7 +1382,6 @@ function mountCattaHub() {
     };
 
     // ── FloatingState ─────────────────────────────────────────
-    // Positions the button freely and applies round-button visual.
     const FloatingState = {
         apply(left, top) {
             btnState = 'floating';
@@ -1412,24 +1395,18 @@ function mountCattaHub() {
     };
 
     // ── GestureHandler ────────────────────────────────────────
-    // Separates tap (< DRAG_THRESHOLD px + < TAP_MAX_MS) from drag.
     function onPointerDown(e) {
         if (e.type === 'touchstart' && e.cancelable) e.preventDefault();
         if (e.stopPropagation) e.stopPropagation();
-
         isDragging = false;
         hasMoved = false;
         pressStartTime = Date.now();
         resetIdleTimer();
-
         const touch = e.touches ? e.touches[0] : e;
         startClientX = touch.clientX;
         startClientY = touch.clientY;
-
-        // Compute logical start position based on current visual state
         const isEdge = btnState === 'edge-left' || btnState === 'edge-right';
         if (isEdge && isTouchDevice()) {
-            // On touch: expand to floating size immediately for smooth drag start
             const { vw } = getVP();
             const midX = btnState === 'edge-right' ? vw - BTN_FLOAT_SIZE / 2 : BTN_FLOAT_SIZE / 2;
             startBtnLeft = clamp(midX - BTN_FLOAT_SIZE / 2, 5, vw - BTN_FLOAT_SIZE - 5);
@@ -1437,7 +1414,6 @@ function mountCattaHub() {
             startBtnLeft = parseFloat(btn.style.left) || 20;
         }
         startBtnTop = parseFloat(btn.style.top) || 120;
-
         document.addEventListener('mousemove', onPointerMove);
         document.addEventListener('touchmove', onPointerMove, { passive: false });
         document.addEventListener('mouseup', onPointerUp);
@@ -1445,33 +1421,22 @@ function mountCattaHub() {
     }
 
     function onPointerMove(e) {
-        if (e.touches && e.touches.length > 1) return; // ignore multi-touch (pinch)
+        if (e.touches && e.touches.length > 1) return;
         if (e.cancelable && e.preventDefault) e.preventDefault();
-
         const touch = e.touches ? e.touches[0] : e;
         const dx = touch.clientX - startClientX;
         const dy = touch.clientY - startClientY;
-
-        // Only commit to drag after threshold (protects against accidental movement)
         if (!hasMoved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
-
         if (!hasMoved) {
-            // First confirmed drag movement: switch to floating visual immediately
             hasMoved = true;
             isDragging = true;
             btn.classList.remove('cfb-edge-left', 'cfb-edge-right');
             btn.classList.add('cfb-floating');
             document.getElementById('catta-edge-img').style.opacity = '0';
-            document.getElementById('catta-float-img').style.opacity = '1';
+            document.getElementById('catta-float-img-wrapper').style.opacity = '1';
         }
-
         AnimationController.setDragging(true);
-
-        const clamped = SnapController.clampToViewport(
-            startBtnLeft + dx,
-            startBtnTop + dy,
-            BTN_FLOAT_SIZE
-        );
+        const clamped = SnapController.clampToViewport(startBtnLeft + dx, startBtnTop + dy, BTN_FLOAT_SIZE);
         btn.style.left = clamped.left + 'px';
         btn.style.top = clamped.top + 'px';
     }
@@ -1481,12 +1446,9 @@ function mountCattaHub() {
         document.removeEventListener('touchmove', onPointerMove);
         document.removeEventListener('mouseup', onPointerUp);
         document.removeEventListener('touchend', onPointerUp);
-
         AnimationController.setDragging(false);
         const pressDuration = Date.now() - pressStartTime;
-
         if (!isDragging && pressDuration < TAP_MAX_MS) {
-            // ── TAP: toggle popup ─────────────────────────
             const $pop = $('#catta-popup');
             if ($pop.is(':visible')) {
                 $pop.animate({ opacity: 0 }, 150, function () { $(this).hide(); });
@@ -1505,18 +1467,14 @@ function mountCattaHub() {
             }
             resetIdleTimer();
         } else if (isDragging) {
-            // ── DRAG END: snap or float ───────────────────
             const currentLeft = parseFloat(btn.style.left);
             const currentTop = parseFloat(btn.style.top);
-
             if (SnapController.shouldSnap(currentLeft)) {
-                const side = SnapController.snapSide(currentLeft);
-                EdgeHandleState.apply(currentTop, side);
+                EdgeHandleState.apply(currentTop, SnapController.snapSide(currentLeft));
             } else {
                 FloatingState.apply(currentLeft, currentTop);
             }
         }
-
         isDragging = false;
         hasMoved = false;
     }
@@ -1524,49 +1482,29 @@ function mountCattaHub() {
     // ── Resize Handler ────────────────────────────────────────
     window.addEventListener('resize', () => {
         if (btnState === 'edge-left' || btnState === 'edge-right') {
-            const side = btnState === 'edge-right' ? 'right' : 'left';
-            EdgeHandleState.apply(parseFloat(btn.style.top) || 120, side);
+            EdgeHandleState.apply(parseFloat(btn.style.top) || 120, btnState === 'edge-right' ? 'right' : 'left');
         } else {
-            const left = parseFloat(btn.style.left) || 20;
-            const top = parseFloat(btn.style.top) || 120;
-            const clamped = SnapController.clampToViewport(left, top, BTN_FLOAT_SIZE);
+            const clamped = SnapController.clampToViewport(parseFloat(btn.style.left) || 20, parseFloat(btn.style.top) || 120, BTN_FLOAT_SIZE);
             btn.style.left = clamped.left + 'px';
             btn.style.top = clamped.top + 'px';
         }
     });
 
     // ── Init: Restore Last Position ───────────────────────────
-    // ปิด transition ชั่วคราวตอน init เพื่อกันปุ่ม overshoot ออกนอกจอก่อนที่ผู้ใช้จะเห็น
     btn.style.transition = 'none';
-
     const saved = loadPos();
     const isTouch = isTouchDevice();
-
     if (saved && isTouch && (saved.state === 'edge-left' || saved.state === 'edge-right')) {
-        // Mobile + saved edge state → restore edge
         EdgeHandleState.apply(saved.top, saved.state === 'edge-right' ? 'right' : 'left');
     } else if (saved && !isTouch) {
-        // Desktop → restore floating as-is
         FloatingState.apply(saved.left, saved.top);
     } else if (saved && isTouch) {
-        // Mobile + saved floating → snap ไปขอบซ้ายแทน (ไม่ใช้ floating บน mobile)
         EdgeHandleState.apply(saved.top || 160, 'left');
     } else {
-        // ไม่มี saved → default: edge-left บน mobile, floating บน desktop
-        if (isTouch) {
-            EdgeHandleState.apply(160, 'left');
-        } else {
-            FloatingState.apply(20, 120);
-        }
+        if (isTouch) { EdgeHandleState.apply(160, 'left'); }
+        else { FloatingState.apply(20, 120); }
     }
-
-    // เปิด transition กลับหลัง paint frame แรกเสร็จ
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            btn.style.transition = '';
-        });
-    });
-
+    requestAnimationFrame(() => { requestAnimationFrame(() => { btn.style.transition = ''; }); });
     resetIdleTimer();
 
     // ── Attach Gesture Events ─────────────────────────────────
@@ -1579,6 +1517,10 @@ function mountCattaHub() {
     const savedAuth = localStorage.getItem('catta_auth_token');
     if (savedUid && savedAuth) loginToAuth(savedUid, savedAuth);
 }
+
+
+
+
 function unmountCattaHub() {
     $('#catta-float-btn').remove();
     $('#catta-popup').remove();
@@ -1708,27 +1650,21 @@ $('body').append(`
         touch-action: none;
         user-select: none;
         -webkit-user-drag: none;
-        overflow: hidden;
         background: transparent;
         border: none;
-        /* Spring transition: size, position, shape all spring together */
         transition:
             width  0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
             height 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
-            border-radius 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
             left   0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
             top    0.3s  cubic-bezier(0.34, 1.56, 0.64, 1),
-            box-shadow 0.3s ease,
             opacity 0.4s ease;
-        will-change: transform, width, height, border-radius, left, top, opacity;
+        will-change: transform, width, height, left, top, opacity;
     }
 
     /* --- Floating state: round button --- */
     #catta-float-btn.cfb-floating {
         width: 62px;
         height: 62px;
-        border-radius: 50%;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.45);
     }
     #catta-float-btn.cfb-floating:active {
         transform: scale(0.92);
@@ -1736,24 +1672,16 @@ $('body').append(`
     }
 
     /* --- Edge-left state: character peeking from left edge --- */
-    /* JS คำนวณ left=-28px (sa.left - 28) → ปุ่มกว้าง 44px โผล่ 16px */
     #catta-float-btn.cfb-edge-left {
-        width: 44px !important;    /* 28px hidden + 16px peek */
+        width: 44px !important;
         height: 60px !important;
-        border-radius: 0 30px 30px 0 !important;
-        box-shadow: 3px 0 16px rgba(0,0,0,0.45) !important;
-        /* ⚠️ ไม่ lock left ใน CSS — JS เป็นคนเซ็ต left ให้ถูกต้อง */
-        opacity: 1; /* reset เพื่อให้ cfb-idle override ได้ */
+        opacity: 1;
     }
 
     /* --- Edge-right state: character peeking from right edge --- */
-    /* JS คำนวณ left = vw - 16 → ปุ่มกว้าง 44px ส่วน 28px ซ่อนอยู่นอกขอบขวา */
     #catta-float-btn.cfb-edge-right {
         width: 44px !important;
         height: 60px !important;
-        border-radius: 30px 0 0 30px !important;
-        box-shadow: -3px 0 16px rgba(0,0,0,0.45) !important;
-        /* ⚠️ ไม่ใช้ right หรือ left:auto — ปล่อยให้ JS เป็นคนเซ็ต left ผ่าน inline style */
         opacity: 1;
     }
 
@@ -1764,11 +1692,10 @@ $('body').append(`
             width: 62px !important;
             height: 62px !important;
             border-radius: 50% !important;
-            /* Desktop ยังให้ JS เซ็ต left ได้ปกติ */
         }
     }
 
-    /* --- Dragging: slight opacity reduction, no spring on position --- */
+    /* --- Dragging: slight opacity, instant position (no spring) --- */
     #catta-float-btn.cfb-dragging {
         opacity: 0.78;
         transition:
@@ -1781,6 +1708,7 @@ $('body').append(`
     #catta-float-btn.cfb-idle {
         opacity: 0.32 !important;
     }
+
 
     #catta-popup {
         position: fixed; width: 300px; max-height: 85vh; 
