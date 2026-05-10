@@ -1325,7 +1325,7 @@ function mountCattaHub() {
             btn.classList.remove('cfb-floating', 'cfb-dragging');
             btn.classList.add(side === 'right' ? 'cfb-edge-right' : 'cfb-edge-left');
             const edgeImg = document.getElementById('catta-edge-img');
-            edgeImg.style.transform = side === 'right' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%) scaleX(1)';
+            edgeImg.style.transform = side === 'right' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-70%) scaleX(1)';
             edgeImg.style.opacity = '1';
             document.getElementById('catta-float-img-wrapper').style.opacity = '0';
         },
