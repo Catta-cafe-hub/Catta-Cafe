@@ -1327,7 +1327,7 @@ function mountCattaHub() {
             btn.classList.add(side === 'right' ? 'cfb-edge-right' : 'cfb-edge-left');
             const edgeImg = document.getElementById('catta-edge-img');
             // รีเซ็ตการชิฟต์รูปภาพให้สมดุลกับความกว้างกล่องที่เพิ่มขึ้น
-            edgeImg.style.transform = side === 'right' ? 'translateX(-70%) scaleX(-1)' : 'translateX(-30%) scaleX(1)';
+            edgeImg.style.transform = side === 'right' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%) scaleX(1)';
             edgeImg.style.opacity = '1';
             document.getElementById('catta-float-img-wrapper').style.opacity = '0';
         },
