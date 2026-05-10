@@ -866,6 +866,13 @@ function renderHubUI() {
     const barVal = localStorage.getItem(barKey);
     const isBarVisible = barVal === null ? true : (barVal === 'true');
 
+    // จำตำแหน่ง Scroll ก่อนรีเฟรชหน้าจอ
+    let savedScrollTop = 0;
+    const $scrollArea = $('.catta-scroll-area');
+    if ($scrollArea.length) {
+        savedScrollTop = $scrollArea.scrollTop();
+    }
+
     let contentHtml = '';
     if (currentView === 'dashboard') {
         contentHtml = `
@@ -1013,6 +1020,11 @@ function renderHubUI() {
         </div>
     `;
     $('#catta-popup').html(html);
+
+    // ดึงตำแหน่ง Scroll กลับมาให้เหมือนเดิม
+    if (savedScrollTop > 0) {
+        $('.catta-scroll-area').scrollTop(savedScrollTop);
+    }
 
     // ── Play Token History System ──────────────────────────────────────────
     // Saves up to 5 tokens per user (keyed by UID) in localStorage as JSON.
