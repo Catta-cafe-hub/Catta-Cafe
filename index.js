@@ -1249,12 +1249,13 @@ function mountCattaHub() {
 
     // ── Constants ─────────────────────────────────────────────
     const BTN_FLOAT_SIZE = 62;   // px — round button diameter
-    const PEEK_W = 38;   // px — visible width when at edge
-    const PEEK_H = 76;   // px — taller to show character body
+    const BTN_EDGE_WIDTH = 52;   // px — width of edge state
+    const PEEK_VISIBLE = 18;     // px — amount of button visible when snapped (เสี้ยวเดียว)
+    const PEEK_H = 76;           // px — taller to show character body
     const EDGE_SNAP_ZONE = 48;   // px from screen edge → triggers snap
     const DRAG_THRESHOLD = 7;    // px moved before drag is confirmed
-    const TAP_MAX_MS = 380;  // ms threshold: tap vs long-press
-    const IDLE_DELAY_MS = 5000; // ms before button fades out
+    const TAP_MAX_MS = 380;      // ms threshold: tap vs long-press
+    const IDLE_DELAY_MS = 5000;  // ms before button fades out
     const STORAGE_KEY = 'catta_btn_pos_v2';
 
     // ── Safe-Area Helper ──────────────────────────────────────
@@ -1367,12 +1368,12 @@ function mountCattaHub() {
 
             if (side === 'right') {
                 btnState = 'edge-right';
-                // Right edge: element left = vw - PEEK_W (only PEEK_W visible)
-                btn.style.left = (vw - PEEK_W) + 'px';
+                // Right edge: element left = vw - PEEK_VISIBLE
+                btn.style.left = (vw - PEEK_VISIBLE) + 'px';
             } else {
                 btnState = 'edge-left';
-                // Left edge: element positioned so only PEEK_W is visible
-                btn.style.left = (-PEEK_W * 0.3) + 'px'; // slight overhang
+                // Left edge: hide everything except PEEK_VISIBLE
+                btn.style.left = -(BTN_EDGE_WIDTH - PEEK_VISIBLE) + 'px';
             }
             btn.style.top = clampedTop + 'px';
             AnimationController.toEdge(side);
