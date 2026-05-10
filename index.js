@@ -1249,9 +1249,10 @@ function mountCattaHub() {
 
     // ── Constants ─────────────────────────────────────────────
     const BTN_FLOAT_SIZE = 62;   // px — round button diameter
-    const BTN_EDGE_WIDTH = 52;   // px — width of edge state
-    const PEEK_VISIBLE = 18;     // px — amount of button visible when snapped (เสี้ยวเดียว)
-    const PEEK_H = 76;           // px — taller to show character body
+    // ⚠️ BTN_EDGE_WIDTH ต้องตรงกับ CSS width ใน cfb-edge-left/right เสมอ
+    const BTN_EDGE_WIDTH = 44;   // px — width of edge state (ต้องตรงกับ CSS: width:44px)
+    const PEEK_VISIBLE = 16;     // px — amount of button visible when snapped (ต้องตรงกับ CSS: left:-28px → 44-28=16)
+    const PEEK_H = 60;           // px — taller to show character body (ต้องตรงกับ CSS: height:60px)
     const EDGE_SNAP_ZONE = 48;   // px from screen edge → triggers snap
     const DRAG_THRESHOLD = 7;    // px moved before drag is confirmed
     const TAP_MAX_MS = 380;      // ms threshold: tap vs long-press
@@ -1368,14 +1369,15 @@ function mountCattaHub() {
             const safeBottom = vh - sa.bottom - PEEK_H - 8;
             const clampedTop = clamp(top, safeTop, safeBottom);
 
+            // ── Edge positioning via `left` only (ไม่ใช้ `right` เพราะชนกับ inline style)
+            // Left edge:  숨겨진 part = BTN_EDGE_WIDTH - PEEK_VISIBLE → left เป็นลบ
+            // Right edge: ปุ่มชิดขวา → left = vw - PEEK_VISIBLE (ส่วนที่โผล่คือ PEEK_VISIBLE)
             if (side === 'right') {
                 btnState = 'edge-right';
-                // Right edge: element left = vw - PEEK_VISIBLE
-                btn.style.left = (vw - PEEK_VISIBLE) + 'px';
+                btn.style.left = (vw - sa.right - PEEK_VISIBLE) + 'px';
             } else {
                 btnState = 'edge-left';
-                // Left edge: hide everything except PEEK_VISIBLE
-                btn.style.left = -(BTN_EDGE_WIDTH - PEEK_VISIBLE) + 'px';
+                btn.style.left = (sa.left - (BTN_EDGE_WIDTH - PEEK_VISIBLE)) + 'px';
             }
             btn.style.top = clampedTop + 'px';
             AnimationController.toEdge(side);
@@ -1710,22 +1712,25 @@ $('body').append(`
     }
 
     /* --- Edge-left state: character peeking from left edge --- */
+    /* JS คำนวณ left=-28px (sa.left - 28) → ปุ่มกว้าง 44px โผล่ 16px */
     #catta-float-btn.cfb-edge-left {
         width: 44px !important;    /* 28px hidden + 16px peek */
         height: 60px !important;
         border-radius: 0 30px 30px 0 !important;
-        left: -28px !important;    /* hide most of it behind edge */
         box-shadow: 3px 0 16px rgba(0,0,0,0.45) !important;
+        /* ⚠️ ไม่ lock left ใน CSS — JS เป็นคนเซ็ต left ให้ถูกต้อง */
+        opacity: 1; /* reset เพื่อให้ cfb-idle override ได้ */
     }
 
     /* --- Edge-right state: character peeking from right edge --- */
+    /* JS คำนวณ left = vw - 16 → ปุ่มกว้าง 44px ส่วน 28px ซ่อนอยู่นอกขอบขวา */
     #catta-float-btn.cfb-edge-right {
         width: 44px !important;
         height: 60px !important;
         border-radius: 30px 0 0 30px !important;
-        right: -28px !important;
-        left: auto !important;
         box-shadow: -3px 0 16px rgba(0,0,0,0.45) !important;
+        /* ⚠️ ไม่ใช้ right หรือ left:auto — ปล่อยให้ JS เป็นคนเซ็ต left ผ่าน inline style */
+        opacity: 1;
     }
 
     /* --- Desktop override: always round, never edge state --- */
@@ -1735,6 +1740,7 @@ $('body').append(`
             width: 62px !important;
             height: 62px !important;
             border-radius: 50% !important;
+            /* Desktop ยังให้ JS เซ็ต left ได้ปกติ */
         }
     }
 
