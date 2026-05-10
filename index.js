@@ -1254,11 +1254,11 @@ function mountCattaHub() {
 
     // ── Constants ─────────────────────────────────────────────
     const BTN_FLOAT_SIZE = 62;
-    const BTN_EDGE_WIDTH = 44;
-    const PEEK_VISIBLE = 20;
+    const BTN_EDGE_WIDTH = 48; // ขยายความกว้างกล่องตอนเกาะขอบ
+    const PEEK_VISIBLE = 34; // เพิ่มระยะที่โผล่ออกมา (เดิม 20) เพื่อให้หลบระยะ Edge Swipe ของมือถือ
     const PEEK_H = 60;
     const EDGE_SNAP_ZONE = 48;
-    const DRAG_THRESHOLD = 7;
+    const DRAG_THRESHOLD = 5; // ลดระยะ Drag ลงนิดนึงให้ตอบสนองไวขึ้น
     const TAP_MAX_MS = 380;
     const IDLE_DELAY_MS = 5000;
     const STORAGE_KEY = 'catta_btn_pos_v2';
@@ -1326,6 +1326,7 @@ function mountCattaHub() {
             btn.classList.remove('cfb-floating', 'cfb-dragging');
             btn.classList.add(side === 'right' ? 'cfb-edge-right' : 'cfb-edge-left');
             const edgeImg = document.getElementById('catta-edge-img');
+            // รีเซ็ตการชิฟต์รูปภาพให้สมดุลกับความกว้างกล่องที่เพิ่มขึ้น
             edgeImg.style.transform = side === 'right' ? 'translateX(-70%) scaleX(-1)' : 'translateX(-30%) scaleX(1)';
             edgeImg.style.opacity = '1';
             document.getElementById('catta-float-img-wrapper').style.opacity = '0';
@@ -1648,8 +1649,10 @@ $('body').append(`
         position: fixed;
         z-index: 2147483647;
         cursor: pointer;
-        touch-action: none;
+        touch-action: none; /* กันบราวเซอร์เลื่อนหน้าจอ */
         user-select: none;
+        -webkit-user-select: none; /* กันคลุมดำ/ไฮไลท์ บน iOS */
+        -webkit-touch-callout: none; /* กันเมนู Save Image เด้งขึ้นมาเวลาเลื่อนผิดจังหวะ */
         -webkit-user-drag: none;
         background: transparent;
         border: none;
