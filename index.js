@@ -1275,7 +1275,9 @@ function mountCattaHub() {
 
     // ── Device Detection ──────────────────────────────────────
     // Touch device = mobile/tablet → edge handle behavior enabled
-    const isTouchDevice = () => window.matchMedia('(hover:none),(pointer:coarse)').matches;
+    const isTouchDevice = () => {
+        return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+    };
 
     // ── Utility ───────────────────────────────────────────────
     function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
@@ -1747,7 +1749,7 @@ $('body').append(`
 
     /* --- Idle: fade when not interacted with --- */
     #catta-float-btn.cfb-idle {
-        opacity: 0.32;
+        opacity: 0.32 !important;
     }
 
     #catta-popup {
