@@ -11,7 +11,7 @@ const extensionName = "CattaHub";
 const CAT_EMOJI = "🐱";
 const CUSTOM_ICON_URL = "https://file.garden/aZx9zS2e7UEiSmfr/cat_icon.png";
 // edge_peek.png: character peeking image shown when button is snapped to edge
-const EDGE_PEEK_URL = "https://file.garden/aZx9zS2e7UEiSmfr/00catta.png";
+const EDGE_PEEK_URL = "https://file.garden/aZx9zS2e7UEiSmfr/catta000.png";
 const DEFAULT_USER_ICON = "https://cdn.discordapp.com/embed/avatars/0.png";
 const NOTIFY_SOUND = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIwAHCxISFRYWGRsfHyIkJCUpKS0wMDI1NTo9PT9CQkZJSU5SUlVYWFxdXV9iYmZoaGlrbG5xcXJ1dXcAAAAATGF2YzU4LjkxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASMH78r7AAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABAAABAAAAAAABAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
@@ -1251,8 +1251,8 @@ function mountCattaHub() {
     const BTN_FLOAT_SIZE = 62;   // px — round button diameter
     // ⚠️ BTN_EDGE_WIDTH ต้องตรงกับ CSS width ใน cfb-edge-left/right เสมอ
     const BTN_EDGE_WIDTH = 44;   // px — width of edge state (ต้องตรงกับ CSS: width:44px)
-    const PEEK_VISIBLE = 16;     // px — amount of button visible when snapped (ต้องตรงกับ CSS: left:-28px → 44-28=16)
-    const PEEK_H = 60;           // px — taller to show character body (ต้องตรงกับ CSS: height:60px)
+    const PEEK_VISIBLE = 20;     // px — amount visible when snapped (20px → hidden = 24px)
+    const PEEK_H = 60;           // px — height of edge state (ต้องตรงกับ CSS: height:60px)
     const EDGE_SNAP_ZONE = 48;   // px from screen edge → triggers snap
     const DRAG_THRESHOLD = 7;    // px moved before drag is confirmed
     const TAP_MAX_MS = 380;      // ms threshold: tap vs long-press
@@ -1276,8 +1276,19 @@ function mountCattaHub() {
 
     // ── Device Detection ──────────────────────────────────────
     // Touch device = mobile/tablet → edge handle behavior enabled
+    // try/catch: window.matchMedia อาจ throw ใน webview บางตัว
     const isTouchDevice = () => {
-        return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+        try {
+            return (
+                'ontouchstart' in window ||
+                navigator.maxTouchPoints > 0 ||
+                navigator.msMaxTouchPoints > 0 ||
+                window.matchMedia('(pointer: coarse)').matches
+            );
+        } catch (_) {
+            // fallback: ถ้า screen แคบกว่า 1024px ถือว่าเป็น touch
+            return window.innerWidth < 1024;
+        }
     };
 
     // ── Utility ───────────────────────────────────────────────
@@ -1525,23 +1536,36 @@ function mountCattaHub() {
     });
 
     // ── Init: Restore Last Position ───────────────────────────
+    // ปิด transition ชั่วคราวตอน init เพื่อกันปุ่ม overshoot ออกนอกจอก่อนที่ผู้ใช้จะเห็น
+    btn.style.transition = 'none';
+
     const saved = loadPos();
-    if (saved && isTouchDevice() && (saved.state === 'edge-left' || saved.state === 'edge-right')) {
-        btn.style.left = saved.left + 'px';
-        btn.style.top = saved.top + 'px';
+    const isTouch = isTouchDevice();
+
+    if (saved && isTouch && (saved.state === 'edge-left' || saved.state === 'edge-right')) {
+        // Mobile + saved edge state → restore edge
         EdgeHandleState.apply(saved.top, saved.state === 'edge-right' ? 'right' : 'left');
-    } else if (saved) {
+    } else if (saved && !isTouch) {
+        // Desktop → restore floating as-is
         FloatingState.apply(saved.left, saved.top);
+    } else if (saved && isTouch) {
+        // Mobile + saved floating → snap ไปขอบซ้ายแทน (ไม่ใช้ floating บน mobile)
+        EdgeHandleState.apply(saved.top || 160, 'left');
     } else {
-        // Default: edge-left on mobile, floating on desktop
-        if (isTouchDevice()) {
-            btn.style.left = '0px';
-            btn.style.top = '160px';
+        // ไม่มี saved → default: edge-left บน mobile, floating บน desktop
+        if (isTouch) {
             EdgeHandleState.apply(160, 'left');
         } else {
             FloatingState.apply(20, 120);
         }
     }
+
+    // เปิด transition กลับหลัง paint frame แรกเสร็จ
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            btn.style.transition = '';
+        });
+    });
 
     resetIdleTimer();
 
