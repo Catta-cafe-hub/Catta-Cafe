@@ -1279,16 +1279,17 @@ function mountCattaHub() {
     }
 
     // ── Device Detection ──────────────────────────────────────
-    const isTouchDevice = () => {
+    const isMobileDevice = () => {
         try {
-            return (
+            const hasTouch = (
                 'ontouchstart' in window ||
                 navigator.maxTouchPoints > 0 ||
                 navigator.msMaxTouchPoints > 0 ||
                 window.matchMedia('(pointer: coarse)').matches
             );
+            return hasTouch && window.innerWidth <= 1024;
         } catch (_) {
-            return window.innerWidth < 1024;
+            return window.innerWidth <= 1024;
         }
     };
 
@@ -1343,7 +1344,7 @@ function mountCattaHub() {
     // ── SnapController ────────────────────────────────────────
     const SnapController = {
         shouldSnap(left) {
-            if (!isTouchDevice()) return false;
+            if (!isMobileDevice()) return false;
             const { vw } = getVP();
             return left < EDGE_SNAP_ZONE || left > vw - BTN_FLOAT_SIZE - EDGE_SNAP_ZONE;
         },
@@ -1406,7 +1407,7 @@ function mountCattaHub() {
         startClientX = touch.clientX;
         startClientY = touch.clientY;
         const isEdge = btnState === 'edge-left' || btnState === 'edge-right';
-        if (isEdge && isTouchDevice()) {
+        if (isEdge && isMobileDevice()) {
             const { vw } = getVP();
             const midX = btnState === 'edge-right' ? vw - BTN_FLOAT_SIZE / 2 : BTN_FLOAT_SIZE / 2;
             startBtnLeft = clamp(midX - BTN_FLOAT_SIZE / 2, 5, vw - BTN_FLOAT_SIZE - 5);
@@ -1493,7 +1494,7 @@ function mountCattaHub() {
     // ── Init: Restore Last Position ───────────────────────────
     btn.style.transition = 'none';
     const saved = loadPos();
-    const isTouch = isTouchDevice();
+    const isTouch = isMobileDevice();
     if (saved && isTouch && (saved.state === 'edge-left' || saved.state === 'edge-right')) {
         EdgeHandleState.apply(saved.top, saved.state === 'edge-right' ? 'right' : 'left');
     } else if (saved && !isTouch) {
