@@ -1709,18 +1709,21 @@ $('body').append(`
 
     /* --- Edge-left state: character peeking from left edge --- */
     #catta-float-btn.cfb-edge-left {
-        width: 52px;        /* total button width */
-        height: 76px;       /* taller to show character body */
-        border-radius: 0 18px 18px 0;  /* flat left, rounded right */
-        box-shadow: 4px 2px 18px rgba(0,0,0,0.4);
+        width: 44px !important;    /* 28px hidden + 16px peek */
+        height: 60px !important;
+        border-radius: 0 30px 30px 0 !important;
+        left: -28px !important;    /* hide most of it behind edge */
+        box-shadow: 3px 0 16px rgba(0,0,0,0.45) !important;
     }
 
     /* --- Edge-right state: character peeking from right edge --- */
     #catta-float-btn.cfb-edge-right {
-        width: 52px;
-        height: 76px;
-        border-radius: 18px 0 0 18px;  /* rounded left, flat right */
-        box-shadow: -4px 2px 18px rgba(0,0,0,0.4);
+        width: 44px !important;
+        height: 60px !important;
+        border-radius: 30px 0 0 30px !important;
+        right: -28px !important;
+        left: auto !important;
+        box-shadow: -3px 0 16px rgba(0,0,0,0.45) !important;
     }
 
     /* --- Desktop override: always round, never edge state --- */
